@@ -1,0 +1,7 @@
+Day 22 Lab Submission Links
+
+GitHub Repository URL:
+https://github.com/HinDayNi/Track2-DAY22-NguyenThiThanhHien-2A202601150
+
+LangSmith Project URL:
+https://smith.langchain.com/o/55aff91f-38f8-4d6d-8480-e74584d0e533/projects/p/95a0ad73-a3d9-4048-91df-bd8d9576b647
