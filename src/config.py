@@ -5,28 +5,53 @@ Tải cấu hình từ file .env và thiết lập biến môi trường LangSmi
     config.py tự động set LANGCHAIN_* vào os.environ khi được import.
 """
 import os
+import sys
 from pathlib import Path
 from dotenv import load_dotenv
+
+# Đảm bảo in UTF-8 không bị lỗi UnicodeEncodeError trên Windows console
+if hasattr(sys.stdout, "reconfigure"):
+    try:
+        sys.stdout.reconfigure(encoding="utf-8", errors="replace")
+        sys.stderr.reconfigure(encoding="utf-8", errors="replace")
+    except Exception:
+        pass
+
 
 # Tải .env từ thư mục gốc của project (Lab/)
 _root = Path(__file__).parent.parent
 load_dotenv(_root / ".env")
 
 # ── LangSmith — PHẢI set trước khi import LangChain ──────────────────────
-os.environ["LANGCHAIN_TRACING_V2"] = os.getenv("LANGCHAIN_TRACING_V2", "true")
-os.environ["LANGCHAIN_API_KEY"]    = os.getenv("LANGCHAIN_API_KEY", "")
-os.environ["LANGCHAIN_PROJECT"]    = os.getenv("LANGCHAIN_PROJECT", "day22-lab")
-os.environ["LANGCHAIN_ENDPOINT"]   = os.getenv("LANGCHAIN_ENDPOINT", "https://api.smith.langchain.com")
+_tracing_enabled = os.getenv("LANGCHAIN_TRACING_V2", "true")
+_langsmith_api_key = os.getenv("LANGSMITH_API_KEY") or os.getenv("LANGCHAIN_API_KEY", "")
+_langsmith_project = os.getenv("LANGSMITH_PROJECT") or os.getenv("LANGCHAIN_PROJECT", "day22-lab")
+_langsmith_endpoint = os.getenv("LANGSMITH_ENDPOINT") or os.getenv(
+    "LANGCHAIN_ENDPOINT", "https://api.smith.langchain.com"
+)
+
+# LANGSMITH_* is the current naming. LANGCHAIN_* remains for backwards
+# compatibility with older LangChain/LangSmith releases and starter .env files.
+os.environ["LANGCHAIN_TRACING_V2"] = _tracing_enabled
+os.environ["LANGSMITH_TRACING"] = _tracing_enabled
+os.environ["LANGSMITH_API_KEY"] = _langsmith_api_key
+os.environ["LANGSMITH_PROJECT"] = _langsmith_project
+os.environ["LANGSMITH_ENDPOINT"] = _langsmith_endpoint
+os.environ["LANGCHAIN_API_KEY"] = _langsmith_api_key
+os.environ["LANGCHAIN_PROJECT"] = _langsmith_project
+os.environ["LANGCHAIN_ENDPOINT"] = _langsmith_endpoint
 
 # ── Provider mặc định ─────────────────────────────────────────────────────
 # Đổi giá trị PROVIDER trong .env: openai | gemini | anthropic | ollama | openrouter
 PROVIDER = os.getenv("PROVIDER", "openai").lower()
 
 # ── OpenAI ────────────────────────────────────────────────────────────────
-OPENAI_API_KEY         = os.getenv("OPENAI_API_KEY", "")
-OPENAI_BASE_URL        = os.getenv("OPENAI_BASE_URL", "")   # để trống nếu dùng OpenAI chính thức
-OPENAI_MODEL           = os.getenv("OPENAI_MODEL", "gpt-4o-mini")
-OPENAI_EMBEDDING_MODEL = os.getenv("OPENAI_EMBEDDING_MODEL", "text-embedding-3-small")
+OPENAI_API_KEY         = os.getenv("OPENAI_API_KEY", "").strip()
+_raw_openai_base_url   = os.getenv("OPENAI_BASE_URL", "").strip()
+OPENAI_BASE_URL        = _raw_openai_base_url if _raw_openai_base_url.startswith("http") else ""
+OPENAI_MODEL           = os.getenv("OPENAI_MODEL", "gpt-4o-mini").strip()
+OPENAI_EMBEDDING_MODEL = os.getenv("OPENAI_EMBEDDING_MODEL", "text-embedding-3-small").strip()
+
 
 # ── Google Gemini ─────────────────────────────────────────────────────────
 GOOGLE_API_KEY          = os.getenv("GOOGLE_API_KEY", "")
@@ -48,8 +73,8 @@ OPENROUTER_MODEL    = os.getenv("OPENROUTER_MODEL", "openai/gpt-4o-mini")
 OPENROUTER_BASE_URL = "https://openrouter.ai/api/v1"
 
 # ── LangSmith ─────────────────────────────────────────────────────────────
-LANGSMITH_API_KEY = os.getenv("LANGCHAIN_API_KEY", "")
-LANGSMITH_PROJECT = os.getenv("LANGCHAIN_PROJECT", "day22-lab")
+LANGSMITH_API_KEY = _langsmith_api_key
+LANGSMITH_PROJECT = _langsmith_project
 
 
 def validate() -> bool:
@@ -60,7 +85,7 @@ def validate() -> bool:
     missing = []
 
     if not LANGSMITH_API_KEY:
-        missing.append("LANGCHAIN_API_KEY (LangSmith)")
+        missing.append("LANGSMITH_API_KEY (or LANGCHAIN_API_KEY)")
 
     if PROVIDER == "openai" and not OPENAI_API_KEY:
         missing.append("OPENAI_API_KEY")
